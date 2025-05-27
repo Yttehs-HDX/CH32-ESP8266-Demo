@@ -27,7 +27,9 @@ async fn main(_spawner: Spawner) -> ! {
         p.DMA1_CH4,
         p.DMA1_CH5,
         uart_config,
-    );
+    ).unwrap();
+
+    let (mut tx, mut rx) = uart.split();
 
     loop {
         Timer::after_millis(1000).await;
