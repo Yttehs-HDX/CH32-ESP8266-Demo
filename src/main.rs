@@ -1,13 +1,12 @@
 #![no_std]
 #![no_main]
-#![feature(type_alias_impl_trait)]
+#![feature(impl_trait_in_assoc_type)]
 
 use embassy_executor::Spawner;
 use embassy_time::Timer;
 use ch32_hal::gpio::{AnyPin, Level, Output, Pin};
 use ch32_hal::println;
 use panic_halt as _;
-
 
 #[embassy_executor::task]
 async fn blink(pin: AnyPin, interval_ms: u64) {
@@ -20,7 +19,6 @@ async fn blink(pin: AnyPin, interval_ms: u64) {
         Timer::after_millis(interval_ms).await;
     }
 }
-
 
 #[embassy_executor::main(entry = "qingke_rt::entry")]
 async fn main(spawner: Spawner) -> ! {
