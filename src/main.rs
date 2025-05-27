@@ -31,6 +31,17 @@ async fn main(_spawner: Spawner) -> ! {
 
     let (mut tx, mut rx) = uart.split();
 
+    let mut buf = [0u8; 64];
+
+    // test
+    println!("Send AT command");
+    let cmd = b"AT\r\n";
+    tx.write(cmd).await.unwrap();
+    buf.fill(0);
+    let len = rx.read_until_idle(&mut buf).await.unwrap();
+    let response = core::str::from_utf8(&buf[..len]).unwrap();
+    println!("Response: {}", response);
+
     loop {
         Timer::after_millis(1000).await;
         println!("tick");
