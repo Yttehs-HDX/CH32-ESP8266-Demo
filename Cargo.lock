@@ -109,6 +109,7 @@ version = "0.1.0"
 dependencies = [
  "ch32-hal",
  "embassy-executor",
+ "embassy-futures",
  "embassy-time",
  "embedded-hal 1.0.0",
  "panic-halt",
