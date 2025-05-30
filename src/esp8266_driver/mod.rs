@@ -1,4 +1,4 @@
-use ch32_hal::{mode::Async, println, usart::{Instance, Uart, UartRx, UartTx}};
+use ch32_hal::{mode::Async, usart::{Instance, Uart, UartRx, UartTx}};
 use heapless::{String, Vec};
 
 const BUF_SIZE: usize = 256;
