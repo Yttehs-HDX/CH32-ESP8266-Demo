@@ -19,10 +19,9 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 }
 
 impl<'d, T: Instance> Esp8266Driver<'d, T> {
-    pub async fn send_raw_command(&mut self, command: &str) -> Result<(), &'static str> {
-        let bytes = command.as_bytes();
+    pub async fn send_raw_command(&mut self, command: &[u8]) -> Result<(), &'static str> {
         self.tx
-            .write(bytes)
+            .write(command)
             .await
             .map_err(|_| "Failed to send byte")?;
         Ok(())
@@ -46,9 +45,10 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 }
 
 impl<'d, T: Instance> Esp8266Driver<'d, T> {
-    pub async fn send_command(&mut self, command: &str) -> Result<(), &'static str> {
+    pub async fn send_command(&mut self, command: &[u8]) -> Result<(), &'static str> {
         let mut cmd = String::<BUF_SIZE>::new();
-        cmd.push_str(command)
+        let cmd_str = core::str::from_utf8(command).map_err(|_| "Command is not valid UTF-8")?;
+        cmd.push_str(cmd_str)
             .map_err(|_| "Failed to create command string")?;
         cmd.push_str("\r\n")
             .map_err(|_| "Failed to append CRLF to command")?;
@@ -61,32 +61,21 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 
     pub async fn send_command_for_response(
         &mut self,
-        command: &str,
+        command: &[u8],
     ) -> Result<(String<BUF_SIZE>, usize), &'static str> {
         self.send_command(command).await?;
         let (raw_response, raw_len) = self.read_raw_response().await?;
-        let response = trim_response(&raw_response, raw_len, command);
+
+        let response = &raw_response[..raw_len];
+        let response = response.trim_matches(|c| c == '\r' || c == '\n');
 
         let mut string = String::<BUF_SIZE>::new();
         string.push_str(response).unwrap();
+        string = string.chars().filter(|&c| c != '\r').collect();
 
         // count length
         let len = string.chars().filter(|&c| c != '\0').count();
 
         Ok((string, len))
     }
-}
-
-impl<'d, T: Instance> Esp8266Driver<'d, T> {
-    // pub fn
-}
-
-fn trim_response<'a>(response: &'a str, len: usize, command: &str) -> &'a str {
-    // clip command loop rx message
-    let mut response_cut = response[..len].split(command);
-    let _ = response_cut.next();
-    let response = response_cut.next().unwrap();
-
-    // trim '\r' and '\n'
-    response.trim_matches(|c| c == '\r' || c == '\n')
 }
