@@ -23,8 +23,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         self.tx
             .write(command)
             .await
-            .map_err(|_| "Failed to send byte")?;
-        Ok(())
+            .map_err(|_| "Failed to send byte")
     }
 
     pub async fn read_raw_response(&mut self) -> Result<(String<BUF_SIZE>, usize), &'static str> {
