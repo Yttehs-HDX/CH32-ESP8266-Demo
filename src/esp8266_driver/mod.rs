@@ -2,6 +2,8 @@ use ch32_hal::{
     mode::Async,
     usart::{Instance, Uart, UartRx, UartTx},
 };
+use embassy_futures::select::{select, Either};
+use embassy_time::Timer;
 use heapless::{String, Vec};
 
 const BUF_SIZE: usize = 256;
@@ -26,17 +28,18 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             .map_err(|_| "Failed to send byte")
     }
 
-    pub async fn read_raw_response(&mut self) -> Result<(String<BUF_SIZE>, usize), &'static str> {
-        let mut buf = [0u8; BUF_SIZE];
+    pub async fn read_raw_response(&mut self, timeout_ms: u64) -> Result<(String<BUF_SIZE>, usize), &'static str> {
+        let timeout = Timer::after_millis(timeout_ms);
 
-        let len = self
-            .rx
-            .read_until_idle(&mut buf)
-            .await
-            .map_err(|_| "Failed to read response")?;
+        let mut buf = [0u8; BUF_SIZE];
+        let read_future = self.rx.read_until_idle(&mut buf);
+
+        let len = match select(timeout, read_future).await {
+            Either::First(_) => return Err("Timeout while waiting for response"),
+            Either::Second(res) => res.map_err(|_| "Failed to read response")?,
+        };
 
         let vec = Vec::from_slice(&buf).map_err(|_| "Failed to convert buffer to Vec")?;
-
         let string = String::from_utf8(vec).map_err(|_| "Failed to convert response to string")?;
 
         Ok((string, len))
@@ -61,9 +64,10 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     pub async fn send_command_for_response(
         &mut self,
         command: &[u8],
+        timeout_ms: u64,
     ) -> Result<(String<BUF_SIZE>, usize), &'static str> {
         self.send_command(command).await?;
-        let (raw_response, raw_len) = self.read_raw_response().await?;
+        let (raw_response, raw_len) = self.read_raw_response(timeout_ms).await?;
 
         let response = &raw_response[..raw_len];
         let response = response.trim_matches(|c| c == '\r' || c == '\n');
