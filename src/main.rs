@@ -5,7 +5,8 @@
 use ch32_hal::{bind_interrupts, println, usart::Uart};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
-use panic_halt as _;
+
+mod lang_items;
 
 bind_interrupts!(
     struct Irqs {
