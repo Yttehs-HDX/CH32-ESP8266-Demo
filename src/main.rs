@@ -1,10 +1,12 @@
 #![no_std]
 #![no_main]
 #![feature(impl_trait_in_assoc_type)]
+#![feature(str_as_str)]
 
 use ch32_hal::{bind_interrupts, println, usart::Uart};
 use embassy_executor::Spawner;
 use embassy_time::Timer;
+use esp8266_driver::Esp8266Driver;
 
 mod lang_items;
 mod esp8266_driver;
@@ -31,17 +33,12 @@ async fn main(_spawner: Spawner) -> ! {
         uart_config,
     ).unwrap();
 
-    let (mut tx, mut rx) = uart.split();
+    let mut esp_driver = Esp8266Driver::new(uart);
 
-    let mut buf = [0u8; 64];
-
-    // test
-    let cmd = b"AT\r\n";
-    tx.write(cmd).await.unwrap();
-    buf.fill(0);
-    let len = rx.read_until_idle(&mut buf).await.unwrap();
-    let response = core::str::from_utf8(&buf[..len]).unwrap();
-    assert!(response.contains("OK"), "Unexpected response: {}", response);
+    esp_driver.send_command("AT\r\n").await.unwrap();
+    let (response, len) = esp_driver.read_response().await.unwrap();
+    println!("Response len: {}", len);
+    println!("Response: {:?}", response[..len].as_str());
 
     loop {
         Timer::after_millis(1000).await;
