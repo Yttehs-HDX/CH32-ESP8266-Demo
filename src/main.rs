@@ -7,6 +7,7 @@ use embassy_executor::Spawner;
 use embassy_time::Timer;
 
 mod lang_items;
+mod esp8266_driver;
 
 bind_interrupts!(
     struct Irqs {
