@@ -8,8 +8,8 @@ use embassy_executor::Spawner;
 use embassy_time::Timer;
 use esp8266_driver::Esp8266Driver;
 
-mod lang_items;
 mod esp8266_driver;
+mod lang_items;
 
 bind_interrupts!(
     struct Irqs {
@@ -31,14 +31,12 @@ async fn main(_spawner: Spawner) -> ! {
         p.DMA1_CH4,
         p.DMA1_CH5,
         uart_config,
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut esp_driver = Esp8266Driver::new(uart);
 
-    let (response, len) = esp_driver
-        .send_command_for_response("AT")
-        .await
-        .unwrap();
+    let (response, len) = esp_driver.send_command_for_response("AT").await.unwrap();
     println!("Response len: {}", len);
     println!("Response: {:?}", response[..len].as_str());
 
