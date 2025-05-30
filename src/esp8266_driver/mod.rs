@@ -39,3 +39,16 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         Ok((string, len))
     }
 }
+
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn send_command(&mut self, command: &str) -> Result<(), &'static str> {
+        let mut cmd = String::<BUF_SIZE>::new();
+        cmd.push_str(command).map_err(|_| "Failed to create command string")?;
+        cmd.push_str("\r\n").map_err(|_| "Failed to append CRLF to command")?;
+
+        self.tx
+            .write(cmd.as_bytes())
+            .await
+            .map_err(|_| "Failed to send command")
+    }
+}
