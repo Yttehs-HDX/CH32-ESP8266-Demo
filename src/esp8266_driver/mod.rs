@@ -65,14 +65,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     ) -> Result<(String<BUF_SIZE>, usize), &'static str> {
         self.send_command(command).await?;
         let (raw_response, raw_len) = self.read_raw_response().await?;
-
-        // clip command loop rx message
-        let mut response_cut = raw_response[..raw_len].split(command);
-        let _ = response_cut.next();
-        let response = response_cut.next().unwrap();
-
-        // trim '\r' and '\n'
-        let response = response.trim_matches(|c| c == '\r' || c == '\n');
+        let response = trim_response(&raw_response, raw_len, command);
 
         let mut string = String::<BUF_SIZE>::new();
         string.push_str(response).unwrap();
@@ -82,4 +75,18 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 
         Ok((string, len))
     }
+}
+
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    // pub fn
+}
+
+fn trim_response<'a>(response: &'a str, len: usize, command: &str) -> &'a str {
+    // clip command loop rx message
+    let mut response_cut = response[..len].split(command);
+    let _ = response_cut.next();
+    let response = response_cut.next().unwrap();
+
+    // trim '\r' and '\n'
+    response.trim_matches(|c| c == '\r' || c == '\n')
 }
