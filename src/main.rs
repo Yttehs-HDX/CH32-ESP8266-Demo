@@ -35,8 +35,10 @@ async fn main(_spawner: Spawner) -> ! {
 
     let mut esp_driver = Esp8266Driver::new(uart);
 
-    esp_driver.send_command("AT").await.unwrap();
-    let (response, len) = esp_driver.read_raw_response().await.unwrap();
+    let (response, len) = esp_driver
+        .send_command_for_response("AT")
+        .await
+        .unwrap();
     println!("Response len: {}", len);
     println!("Response: {:?}", response[..len].as_str());
 

@@ -1,4 +1,4 @@
-use ch32_hal::{mode::Async, usart::{Instance, Uart, UartRx, UartTx}};
+use ch32_hal::{mode::Async, println, usart::{Instance, Uart, UartRx, UartTx}};
 use heapless::{String, Vec};
 
 const BUF_SIZE: usize = 256;
@@ -50,5 +50,29 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             .write(cmd.as_bytes())
             .await
             .map_err(|_| "Failed to send command")
+    }
+
+    pub async fn send_command_for_response(&mut self, command: &str) -> Result<(String<BUF_SIZE>, usize), &'static str> {
+        self.send_command(command).await?;
+        let (raw_response, raw_len) = self.read_raw_response().await?;
+
+        // clip command loop rx message
+        let mut response_cut = raw_response[..raw_len].split(command);
+        let _ = response_cut.next();
+        let response = response_cut.next().unwrap();
+
+        // trim '\r' and '\n'
+        let response = response.trim_matches(|c| c == '\r' || c == '\n');
+
+        let mut string = String::<BUF_SIZE>::new();
+        string.push_str(response).unwrap();
+
+        // count length
+        let len = string
+            .chars()
+            .filter(|&c| c != '\0')
+            .count();
+
+        Ok((string, len))
     }
 }
