@@ -118,7 +118,7 @@ pub enum WifiMode {
 }
 
 impl WifiMode {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str<'a>(&self) -> &'a str {
         match self {
             WifiMode::Station => "1",
             WifiMode::SoftAP => "2",
@@ -232,7 +232,7 @@ pub enum Protocol {
 }
 
 impl Protocol {
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str<'a>(&self) -> &'a str {
         match self {
             Protocol::Tcp => "TCP",
         }
