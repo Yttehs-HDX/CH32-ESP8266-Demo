@@ -286,4 +286,45 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     }
 }
 
+#[allow(unused)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataTransferMode {
+    Normal,
+    Transparent,
+}
+
+impl DataTransferMode {
+    pub fn as_str<'a>(&self) -> &'a str {
+        match self {
+            DataTransferMode::Normal => "0",
+            DataTransferMode::Transparent => "1",
+        }
+    }
+}
+
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn set_data_transfer_mode(
+        &mut self,
+        mode: DataTransferMode,
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
+        let mut command = String::<BUF_SIZE>::new();
+        command
+            .push_str(
+                core::str::from_utf8(AT_CIPMODE)
+                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
+            )
+            .map_err(|_| {
+                Error::StringConversionError(StringConversionError::BufferConversionError)
+            })?;
+        command.push_str(mode.as_str()).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+
+        let len = command.chars().filter(|&c| c != '\0').count();
+        self.send_command_for_response(command[..len].as_bytes(), timeout_ms)
+            .await
+    }
+}
+
 type Error = Esp8266Error;
