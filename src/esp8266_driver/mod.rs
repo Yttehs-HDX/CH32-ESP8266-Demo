@@ -147,4 +147,38 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     }
 }
 
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn check_wifi_connection(
+        &mut self,
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
+        self.send_command_for_response(AT_CIFSR, timeout_ms).await
+    }
+
+    pub async fn loop_until_wifi_connected(&mut self) -> Result<(String<BUF_SIZE>, usize), Error> {
+        let (mut response, mut len);
+        loop {
+            (response, len) = self.check_wifi_connection(1000).await.unwrap();
+            let response = response[..len].as_str();
+            if response.contains("OK") {
+                break;
+            }
+        }
+        Ok((response, len))
+    }
+
+    pub async fn wait_for_wifi_connection(
+        &mut self,
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
+        let timeout = Timer::after_millis(timeout_ms);
+        let loop_future = self.loop_until_wifi_connected();
+
+        match select(timeout, loop_future).await {
+            Either::First(_) => Err(Error::RxError(RxError::Timeout)),
+            Either::Second(res) => res,
+        }
+    }
+}
+
 type Error = Esp8266Error;
