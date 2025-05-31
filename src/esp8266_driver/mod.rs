@@ -5,7 +5,6 @@ use ch32_hal::{
 use command::*;
 use embassy_futures::select::{select, Either};
 use embassy_time::Timer;
-use error::Esp8266Error;
 use error::*;
 use heapless::{String, Vec};
 
