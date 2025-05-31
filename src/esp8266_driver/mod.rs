@@ -83,10 +83,11 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         let response = response.trim_matches(|c| c == '\r' || c == '\n');
 
         let mut string = String::<BUF_SIZE>::new();
-        string.push_str(response).unwrap();
+        string.push_str(response).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
         string = string.chars().filter(|&c| c != '\r').collect();
 
-        // count length
         let len = string.chars().filter(|&c| c != '\0').count();
 
         Ok((string, len))
@@ -133,7 +134,10 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let mut command = String::<BUF_SIZE>::new();
         command
-            .push_str(core::str::from_utf8(AT_CWMODE).unwrap())
+            .push_str(
+                core::str::from_utf8(AT_CWMODE)
+                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
+            )
             .map_err(|_| {
                 Error::StringConversionError(StringConversionError::BufferConversionError)
             })?;
@@ -159,7 +163,10 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 
         let mut command = String::<BUF_SIZE>::new();
         command
-            .push_str(core::str::from_utf8(AT_CWJAP).unwrap())
+            .push_str(
+                core::str::from_utf8(AT_CWJAP)
+                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
+            )
             .map_err(|_| {
                 Error::StringConversionError(StringConversionError::BufferConversionError)
             })?;
@@ -196,7 +203,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     pub async fn loop_until_wifi_connected(&mut self) -> Result<(String<BUF_SIZE>, usize), Error> {
         let (mut response, mut len);
         loop {
-            (response, len) = self.check_wifi_connection(1000).await.unwrap();
+            (response, len) = self.check_wifi_connection(1000).await?;
             let response = response[..len].as_str();
             if response.contains("OK") {
                 break;
@@ -247,7 +254,10 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 
         let mut command = String::<BUF_SIZE>::new();
         command
-            .push_str(core::str::from_utf8(AT_CIPSTART).unwrap())
+            .push_str(
+                core::str::from_utf8(AT_CIPSTART)
+                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
+            )
             .map_err(|_| {
                 Error::StringConversionError(StringConversionError::BufferConversionError)
             })?;
