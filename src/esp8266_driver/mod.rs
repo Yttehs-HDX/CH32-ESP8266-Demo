@@ -71,7 +71,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         })?;
 
         let len = cmd.chars().filter(|&c| c != '\0').count();
-        self.send_raw_command(&cmd[..len].as_bytes()).await
+        self.send_raw_command(cmd[..len].as_bytes()).await
     }
 
     pub async fn read_response(
