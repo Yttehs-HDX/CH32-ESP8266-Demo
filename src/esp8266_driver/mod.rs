@@ -148,6 +148,44 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 }
 
 impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn connect_to_wifi(
+        &mut self,
+        ssid: &[u8],
+        password: &[u8],
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
+        let ssid = core::str::from_utf8(ssid)
+            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+        let password = core::str::from_utf8(password)
+            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+        let mut command = String::<BUF_SIZE>::new();
+        command
+            .push_str(core::str::from_utf8(AT_CWJAP).unwrap())
+            .map_err(|_| {
+                Error::StringConversionError(StringConversionError::BufferConversionError)
+            })?;
+        command.push_str("\"").map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str(ssid).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str("\",\"").map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str(password).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str("\"").map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+
+        let len = command.chars().filter(|&c| c != '\0').count();
+        self.send_command_for_response(command[..len].as_bytes(), 10000)
+            .await
+    }
+}
+
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
     pub async fn check_wifi_connection(
         &mut self,
         timeout_ms: u64,
