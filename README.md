@@ -34,6 +34,8 @@ This project is for CH32V307VCT6 only:
 
 Wrap AT-commands for a better experience.
 
+![preview](docs/assets/preview.jpg)
+
 ### Output Example
 
 ```txt
