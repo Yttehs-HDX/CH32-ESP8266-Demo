@@ -70,10 +70,8 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             Error::StringConversionError(StringConversionError::BufferConversionError)
         })?;
 
-        self.tx
-            .write(cmd.as_bytes())
-            .await
-            .map_err(|e| Error::TxError(TxError::WriteError(e)))
+        let len = cmd.chars().filter(|&c| c != '\0').count();
+        self.send_raw_command(&cmd[..len].as_bytes()).await
     }
 
     pub async fn read_response(
