@@ -317,4 +317,68 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     }
 }
 
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn send_network_request(
+        &mut self,
+        request: &[u8],
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
+        let request_len = request.len() + 2; // +2 for auto \r\n
+        let request_len = crate::util::parse_to_str::<BUF_SIZE, _>(request_len)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        let request_len = request_len.0[..request_len.1].as_str();
+
+        // Prepare the AT+CIPSEND command with the request length
+        let mut command = String::<BUF_SIZE>::new();
+        command
+            .push_str(core::str::from_utf8(AT_CIPSEND).map_err(|_| {
+                Error::StringConversion(error::StringConversionError::Utf8Conversion)
+            })?)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(request_len)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+
+        ch32_hal::println!("Sending command: {:?}", command);
+        self.send_command(command.as_bytes()).await?;
+
+        // Prepare the actual request command
+        command.clear();
+        command
+            .push_str(core::str::from_utf8(request).map_err(|_| {
+                Error::StringConversion(error::StringConversionError::Utf8Conversion)
+            })?)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+
+        let mut response = String::<BUF_SIZE>::new();
+
+        let len = command.chars().filter(|&c| c != '\0').count();
+        let (res, l) = self.send_command_for_response(command[..len].as_bytes(), timeout_ms)
+            .await?;
+        response.push_str(&res[..l]).map_err(|_| {
+            Error::StringConversion(error::StringConversionError::BufferConversion)
+        })?;
+
+        loop {
+            match self.read_response(timeout_ms).await {
+                Ok((res, l)) => {
+                    response.push_str(&res[..l]).map_err(|_| {
+                        Error::StringConversion(error::StringConversionError::BufferConversion)
+                    })?;
+                },
+                Err(e) => {
+                    if e == Error::Rx(error::RxError::Timeout) {
+                        break; // Exit the loop on timeout
+                    } else {
+                        return Err(e); // Propagate other errors
+                    }
+                },
+            }
+        }
+
+        let len = response.chars().filter(|&c| c != '\0').count();
+        Ok((response, len))
+    }
+}
+
 type Error = error::Esp8266Error;
