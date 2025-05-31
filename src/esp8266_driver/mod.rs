@@ -226,15 +226,20 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     }
 }
 
+#[allow(unused)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Protocol {
     Tcp,
+    Udp,
+    Ssl,
 }
 
 impl Protocol {
     pub fn as_str<'a>(&self) -> &'a str {
         match self {
             Protocol::Tcp => "TCP",
+            Protocol::Udp => "UDP",
+            Protocol::Ssl => "SSL",
         }
     }
 }
