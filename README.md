@@ -87,6 +87,10 @@ cargo run --release
 make run
 ```
 
+## Discussion
+
+[Discussions](https://github.com/ch32-rs/ch32-hal/discussions/100) at ch32-hal.
+
 ## Special Thanks
 
 - [`ch32-rs/ch32-hal`](https://github.com/ch32-rs/ch32-hal): HAL implementation for CH32V307.
