@@ -8,9 +8,11 @@ pub enum Esp8266Error {
 impl core::fmt::Debug for Esp8266Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Esp8266Error::RxError(e) => write!(f, "Esp8266Error::RxError({:?})", e),
-            Esp8266Error::TxError(e) => write!(f, "Esp8266Error::TxError({:?})", e),
-            Esp8266Error::StringConversionError(e) => write!(f, "Esp8266Error::StringConversionError({:?})", e),
+            Esp8266Error::RxError(e) => write!(f, "Esp8266Error::RxError({e:?})"),
+            Esp8266Error::TxError(e) => write!(f, "Esp8266Error::TxError({e:?})"),
+            Esp8266Error::StringConversionError(e) => {
+                write!(f, "Esp8266Error::StringConversionError({e:?})")
+            }
         }
     }
 }
@@ -24,7 +26,7 @@ pub enum RxError {
 impl core::fmt::Debug for RxError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            RxError::ReadError(e) => write!(f, "RxError::ReadError({:?})", e),
+            RxError::ReadError(e) => write!(f, "RxError::ReadError({e:?})"),
             RxError::Timeout => write!(f, "RxError::Timeout"),
         }
     }
@@ -38,7 +40,7 @@ pub enum TxError {
 impl core::fmt::Debug for TxError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            TxError::WriteError(e) => write!(f, "TxError::WriteError({:?})", e),
+            TxError::WriteError(e) => write!(f, "TxError::WriteError({e:?})"),
         }
     }
 }

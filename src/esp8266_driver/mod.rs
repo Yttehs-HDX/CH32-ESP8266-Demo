@@ -2,12 +2,14 @@ use ch32_hal::{
     mode::Async,
     usart::{Instance, Uart, UartRx, UartTx},
 };
+use command::*;
 use embassy_futures::select::{select, Either};
 use embassy_time::Timer;
 use error::Esp8266Error;
-use heapless::{String, Vec};
 use error::*;
+use heapless::{String, Vec};
 
+mod command;
 pub mod error;
 
 const BUF_SIZE: usize = 256;
@@ -32,7 +34,10 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             .map_err(|e| Error::TxError(TxError::WriteError(e)))
     }
 
-    pub async fn read_raw_response(&mut self, timeout_ms: u64) -> Result<(String<BUF_SIZE>, usize), Error> {
+    pub async fn read_raw_response(
+        &mut self,
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let timeout = Timer::after_millis(timeout_ms);
 
         let mut buf = [0u8; BUF_SIZE];
@@ -43,8 +48,11 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             Either::Second(res) => res.map_err(|e| Error::RxError(RxError::ReadError(e)))?,
         };
 
-        let vec = Vec::from_slice(&buf).map_err(|_| Error::StringConversionError(StringConversionError::BufferConversionError))?;
-        let string = String::from_utf8(vec).map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+        let vec = Vec::from_slice(&buf).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        let string = String::from_utf8(vec)
+            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
 
         Ok((string, len))
     }
@@ -53,11 +61,14 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
 impl<'d, T: Instance> Esp8266Driver<'d, T> {
     pub async fn send_command(&mut self, command: &[u8]) -> Result<(), Error> {
         let mut cmd = String::<BUF_SIZE>::new();
-        let cmd_str = core::str::from_utf8(command).map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
-        cmd.push_str(cmd_str)
-            .map_err(|_| Error::StringConversionError(StringConversionError::BufferConversionError))?;
-        cmd.push_str("\r\n")
-            .map_err(|_| Error::StringConversionError(StringConversionError::BufferConversionError))?;
+        let cmd_str = core::str::from_utf8(command)
+            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+        cmd.push_str(cmd_str).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        cmd.push_str("\r\n").map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
 
         self.tx
             .write(cmd.as_bytes())
@@ -65,7 +76,10 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             .map_err(|e| Error::TxError(TxError::WriteError(e)))
     }
 
-    pub async fn read_response(&mut self, timeout_ms: u64) -> Result<(String<BUF_SIZE>, usize), Error> {
+    pub async fn read_response(
+        &mut self,
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let (raw_response, raw_len) = self.read_raw_response(timeout_ms).await?;
 
         let response = &raw_response[..raw_len];
@@ -88,6 +102,50 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     ) -> Result<(String<BUF_SIZE>, usize), Error> {
         self.send_command(command).await?;
         self.read_response(timeout_ms).await
+    }
+}
+
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn at_test(&mut self) -> Result<(String<BUF_SIZE>, usize), Error> {
+        self.send_command_for_response(AT, 1000).await
+    }
+}
+
+#[allow(unused)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WifiMode {
+    Station,
+    SoftAP,
+    StationSoftAP,
+}
+
+impl WifiMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            WifiMode::Station => "1",
+            WifiMode::SoftAP => "2",
+            WifiMode::StationSoftAP => "3",
+        }
+    }
+}
+
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn set_wifi_mode(
+        &mut self,
+        mode: WifiMode,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
+        let mut command = String::<BUF_SIZE>::new();
+        command
+            .push_str(core::str::from_utf8(AT_CWMODE).unwrap())
+            .map_err(|_| {
+                Error::StringConversionError(StringConversionError::BufferConversionError)
+            })?;
+        command.push_str(mode.as_str()).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        let len = command.chars().filter(|&c| c != '\0').count();
+        self.send_command_for_response(command[..len].as_bytes(), 1000)
+            .await
     }
 }
 
