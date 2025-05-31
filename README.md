@@ -56,7 +56,7 @@ Get the pure response from server:
 
 ```txt
 c
-Hello, world!
+Hello World!
 0
 ```
 
