@@ -61,12 +61,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             .map_err(|_| "Failed to send command")
     }
 
-    pub async fn send_command_for_response(
-        &mut self,
-        command: &[u8],
-        timeout_ms: u64,
-    ) -> Result<(String<BUF_SIZE>, usize), &'static str> {
-        self.send_command(command).await?;
+    pub async fn read_response(&mut self, timeout_ms: u64) -> Result<(String<BUF_SIZE>, usize), &'static str> {
         let (raw_response, raw_len) = self.read_raw_response(timeout_ms).await?;
 
         let response = &raw_response[..raw_len];
@@ -80,5 +75,14 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         let len = string.chars().filter(|&c| c != '\0').count();
 
         Ok((string, len))
+    }
+
+    pub async fn send_command_for_response(
+        &mut self,
+        command: &[u8],
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), &'static str> {
+        self.send_command(command).await?;
+        self.read_response(timeout_ms).await
     }
 }
