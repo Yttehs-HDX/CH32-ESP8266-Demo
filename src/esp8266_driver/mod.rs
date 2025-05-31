@@ -353,11 +353,12 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         let mut response = String::<BUF_SIZE>::new();
 
         let len = command.chars().filter(|&c| c != '\0').count();
-        let (res, l) = self.send_command_for_response(command[..len].as_bytes(), timeout_ms)
+        let (res, l) = self
+            .send_command_for_response(command[..len].as_bytes(), timeout_ms)
             .await?;
-        response.push_str(&res[..l]).map_err(|_| {
-            Error::StringConversion(error::StringConversionError::BufferConversion)
-        })?;
+        response
+            .push_str(&res[..l])
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
 
         loop {
             match self.read_response(timeout_ms).await {
@@ -365,14 +366,14 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
                     response.push_str(&res[..l]).map_err(|_| {
                         Error::StringConversion(error::StringConversionError::BufferConversion)
                     })?;
-                },
+                }
                 Err(e) => {
                     if e == Error::Rx(error::RxError::Timeout) {
                         break; // Exit the loop on timeout
                     } else {
                         return Err(e); // Propagate other errors
                     }
-                },
+                }
             }
         }
 
