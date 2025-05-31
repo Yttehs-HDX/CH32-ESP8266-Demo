@@ -1,5 +1,7 @@
 # CH32-ESP8266-Demo
 
+[![Build test](https://github.com/Yttehs-HDX/CH32-ESP8266-Demo/actions/workflows/build-test.yml/badge.svg)](https://github.com/Yttehs-HDX/CH32-ESP8266-Demo/actions/workflows/build-test.yml)
+
 Demo for ESP8266 under CH32V307VCT6 using ch32-hal
 
 ## Features
