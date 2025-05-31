@@ -5,7 +5,6 @@ use ch32_hal::{
 use command::*;
 use embassy_futures::select::{select, Either};
 use embassy_time::Timer;
-use error::*;
 use heapless::{String, Vec};
 
 mod command;
@@ -30,7 +29,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         self.tx
             .write(command)
             .await
-            .map_err(|e| Error::TxError(TxError::WriteError(e)))
+            .map_err(|e| Error::Tx(error::TxError::Write(e)))
     }
 
     pub async fn read_raw_response(
@@ -43,15 +42,14 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         let read_future = self.rx.read_until_idle(&mut buf);
 
         let len = match select(timeout, read_future).await {
-            Either::First(_) => return Err(Error::RxError(RxError::Timeout)),
-            Either::Second(res) => res.map_err(|e| Error::RxError(RxError::ReadError(e)))?,
+            Either::First(_) => return Err(Error::Rx(error::RxError::Timeout)),
+            Either::Second(res) => res.map_err(|e| Error::Rx(error::RxError::Read(e)))?,
         };
 
-        let vec = Vec::from_slice(&buf).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
+        let vec = Vec::from_slice(&buf)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
         let string = String::from_utf8(vec)
-            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+            .map_err(|_| Error::StringConversion(error::StringConversionError::Utf8Conversion))?;
 
         Ok((string, len))
     }
@@ -61,13 +59,11 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     pub async fn send_command(&mut self, command: &[u8]) -> Result<(), Error> {
         let mut cmd = String::<BUF_SIZE>::new();
         let cmd_str = core::str::from_utf8(command)
-            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
-        cmd.push_str(cmd_str).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        cmd.push_str("\r\n").map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
+            .map_err(|_| Error::StringConversion(error::StringConversionError::Utf8Conversion))?;
+        cmd.push_str(cmd_str)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        cmd.push_str("\r\n")
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
 
         let len = cmd.chars().filter(|&c| c != '\0').count();
         self.send_raw_command(cmd[..len].as_bytes()).await
@@ -83,9 +79,9 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         let response = response.trim_matches(|c| c == '\r' || c == '\n');
 
         let mut string = String::<BUF_SIZE>::new();
-        string.push_str(response).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
+        string
+            .push_str(response)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
         string = string.chars().filter(|&c| c != '\r').collect();
 
         let len = string.chars().filter(|&c| c != '\0').count();
@@ -134,16 +130,13 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let mut command = String::<BUF_SIZE>::new();
         command
-            .push_str(
-                core::str::from_utf8(AT_CWMODE)
-                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
-            )
-            .map_err(|_| {
-                Error::StringConversionError(StringConversionError::BufferConversionError)
-            })?;
-        command.push_str(mode.as_str()).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
+            .push_str(core::str::from_utf8(AT_CWMODE).map_err(|_| {
+                Error::StringConversion(error::StringConversionError::Utf8Conversion)
+            })?)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(mode.as_str())
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
         let len = command.chars().filter(|&c| c != '\0').count();
         self.send_command_for_response(command[..len].as_bytes(), 1000)
             .await
@@ -157,34 +150,31 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         password: &[u8],
     ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let ssid = core::str::from_utf8(ssid)
-            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+            .map_err(|_| Error::StringConversion(error::StringConversionError::Utf8Conversion))?;
         let password = core::str::from_utf8(password)
-            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+            .map_err(|_| Error::StringConversion(error::StringConversionError::Utf8Conversion))?;
 
         let mut command = String::<BUF_SIZE>::new();
         command
-            .push_str(
-                core::str::from_utf8(AT_CWJAP)
-                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
-            )
-            .map_err(|_| {
-                Error::StringConversionError(StringConversionError::BufferConversionError)
-            })?;
-        command.push_str("\"").map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str(ssid).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str("\",\"").map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str(password).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str("\"").map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
+            .push_str(core::str::from_utf8(AT_CWJAP).map_err(|_| {
+                Error::StringConversion(error::StringConversionError::Utf8Conversion)
+            })?)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str("\"")
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(ssid)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str("\",\"")
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(password)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str("\"")
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
 
         let len = command.chars().filter(|&c| c != '\0').count();
         self.send_command_for_response(command[..len].as_bytes(), 10000)
@@ -220,7 +210,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         let loop_future = self.loop_until_wifi_connected();
 
         match select(timeout, loop_future).await {
-            Either::First(_) => Err(Error::RxError(RxError::Timeout)),
+            Either::First(_) => Err(Error::Rx(error::RxError::Timeout)),
             Either::Second(res) => res,
         }
     }
@@ -253,37 +243,34 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
         timeout_ms: u64,
     ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let ip = core::str::from_utf8(ip)
-            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+            .map_err(|_| Error::StringConversion(error::StringConversionError::Utf8Conversion))?;
         let port = core::str::from_utf8(port)
-            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+            .map_err(|_| Error::StringConversion(error::StringConversionError::Utf8Conversion))?;
 
         let mut command = String::<BUF_SIZE>::new();
         command
-            .push_str(
-                core::str::from_utf8(AT_CIPSTART)
-                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
-            )
-            .map_err(|_| {
-                Error::StringConversionError(StringConversionError::BufferConversionError)
-            })?;
-        command.push_str("\"").map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str(protocol.as_str()).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str("\",\"").map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str(ip).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str("\",").map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
-        command.push_str(port).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
+            .push_str(core::str::from_utf8(AT_CIPSTART).map_err(|_| {
+                Error::StringConversion(error::StringConversionError::Utf8Conversion)
+            })?)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str("\"")
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(protocol.as_str())
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str("\",\"")
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(ip)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str("\",")
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(port)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
 
         let len = command.chars().filter(|&c| c != '\0').count();
         self.send_command_for_response(command[..len].as_bytes(), timeout_ms)
@@ -315,16 +302,13 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let mut command = String::<BUF_SIZE>::new();
         command
-            .push_str(
-                core::str::from_utf8(AT_CIPMODE)
-                    .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?,
-            )
-            .map_err(|_| {
-                Error::StringConversionError(StringConversionError::BufferConversionError)
-            })?;
-        command.push_str(mode.as_str()).map_err(|_| {
-            Error::StringConversionError(StringConversionError::BufferConversionError)
-        })?;
+            .push_str(core::str::from_utf8(AT_CIPMODE).map_err(|_| {
+                Error::StringConversion(error::StringConversionError::Utf8Conversion)
+            })?)
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
+        command
+            .push_str(mode.as_str())
+            .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
 
         let len = command.chars().filter(|&c| c != '\0').count();
         self.send_command_for_response(command[..len].as_bytes(), timeout_ms)
@@ -332,4 +316,4 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     }
 }
 
-type Error = Esp8266Error;
+type Error = error::Esp8266Error;

@@ -1,17 +1,17 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Esp8266Error {
-    RxError(RxError),
-    TxError(TxError),
-    StringConversionError(StringConversionError),
+    Rx(RxError),
+    Tx(TxError),
+    StringConversion(StringConversionError),
 }
 
 impl core::fmt::Debug for Esp8266Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Esp8266Error::RxError(e) => write!(f, "Esp8266Error::RxError({e:?})"),
-            Esp8266Error::TxError(e) => write!(f, "Esp8266Error::TxError({e:?})"),
-            Esp8266Error::StringConversionError(e) => {
-                write!(f, "Esp8266Error::StringConversionError({e:?})")
+            Esp8266Error::Rx(e) => write!(f, "Esp8266Error::Rx({e:?})"),
+            Esp8266Error::Tx(e) => write!(f, "Esp8266Error::Tx({e:?})"),
+            Esp8266Error::StringConversion(e) => {
+                write!(f, "Esp8266Error::StringConversion({e:?})")
             }
         }
     }
@@ -19,14 +19,14 @@ impl core::fmt::Debug for Esp8266Error {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum RxError {
-    ReadError(ch32_hal::usart::Error),
+    Read(ch32_hal::usart::Error),
     Timeout,
 }
 
 impl core::fmt::Debug for RxError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            RxError::ReadError(e) => write!(f, "RxError::ReadError({e:?})"),
+            RxError::Read(e) => write!(f, "RxError::Read({e:?})"),
             RxError::Timeout => write!(f, "RxError::Timeout"),
         }
     }
@@ -34,19 +34,19 @@ impl core::fmt::Debug for RxError {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TxError {
-    WriteError(ch32_hal::usart::Error),
+    Write(ch32_hal::usart::Error),
 }
 
 impl core::fmt::Debug for TxError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            TxError::WriteError(e) => write!(f, "TxError::WriteError({e:?})"),
+            TxError::Write(e) => write!(f, "TxError::Write({e:?})"),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StringConversionError {
-    Utf8Error,
-    BufferConversionError,
+    Utf8Conversion,
+    BufferConversion,
 }
