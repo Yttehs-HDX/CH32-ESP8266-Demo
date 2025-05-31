@@ -244,7 +244,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
     ) -> Result<(String<BUF_SIZE>, usize), Error> {
         let ip = core::str::from_utf8(ip)
             .map_err(|_| Error::StringConversion(error::StringConversionError::Utf8Conversion))?;
-        let port = crate::util::parse_to_str::<_, 5>(port)
+        let port = crate::util::parse_to_str::<5, _>(port)
             .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
         let port = port.0[..port.1].as_str();
 
