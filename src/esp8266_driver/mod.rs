@@ -156,6 +156,7 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
         let password = core::str::from_utf8(password)
             .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+
         let mut command = String::<BUF_SIZE>::new();
         command
             .push_str(core::str::from_utf8(AT_CWJAP).unwrap())
@@ -215,6 +216,63 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             Either::First(_) => Err(Error::RxError(RxError::Timeout)),
             Either::Second(res) => res,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Protocol {
+    Tcp,
+}
+
+impl Protocol {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Protocol::Tcp => "TCP",
+        }
+    }
+}
+
+impl<'d, T: Instance> Esp8266Driver<'d, T> {
+    pub async fn connect_to_server(
+        &mut self,
+        protocol: Protocol,
+        ip: &[u8],
+        port: &[u8],
+        timeout_ms: u64,
+    ) -> Result<(String<BUF_SIZE>, usize), Error> {
+        let ip = core::str::from_utf8(ip)
+            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+        let port = core::str::from_utf8(port)
+            .map_err(|_| Error::StringConversionError(StringConversionError::Utf8Error))?;
+
+        let mut command = String::<BUF_SIZE>::new();
+        command
+            .push_str(core::str::from_utf8(AT_CIPSTART).unwrap())
+            .map_err(|_| {
+                Error::StringConversionError(StringConversionError::BufferConversionError)
+            })?;
+        command.push_str("\"").map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str(protocol.as_str()).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str("\",\"").map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str(ip).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str("\",").map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+        command.push_str(port).map_err(|_| {
+            Error::StringConversionError(StringConversionError::BufferConversionError)
+        })?;
+
+        let len = command.chars().filter(|&c| c != '\0').count();
+        self.send_command_for_response(command[..len].as_bytes(), timeout_ms)
+            .await
     }
 }
 
