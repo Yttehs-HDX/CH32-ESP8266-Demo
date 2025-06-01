@@ -45,7 +45,6 @@ Wrap AT-commands for a better experience.
 2025-06-01 01:59:57.136: Connect to Wi-Fi: "AT+CWJAP=\"SSID\",\"PASSWORD\"
 2025-06-01 01:59:57.157: Wi-Fi Status: "AT+CIFSR\n+CIFSR:STAIP,\"192.168.1.101\"\n+CIFSR:STAMAC,\"2c:3a:e8:40:bb:c8\"\n\nOK"
 2025-06-01 01:59:57.175: Connect to Server: "AT+CIPSTART=\"TCP\",\"192.168.1.111\",5000"
-2025-06-01 02:00:00.169: Sending command: "AT+CIPSEND=44"
 2025-06-01 02:00:01.390: Send Network Request: "Recv 44 bytesSEND OK+IPD,164:HTTP/1.1 200 OK\nContent-Type: text/plain; charset=utf-8\nDate: Sat, 31 May 2025 17:59:59 GMT\nServer: Kestrel\nTransfer-Encoding: chunked\n\nc\nHello World!\n0"
 2025-06-01 02:00:02.402: tick
 2025-06-01 02:00:03.398: tick

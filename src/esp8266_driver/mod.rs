@@ -339,7 +339,6 @@ impl<'d, T: Instance> Esp8266Driver<'d, T> {
             .push_str(request_len)
             .map_err(|_| Error::StringConversion(error::StringConversionError::BufferConversion))?;
 
-        ch32_hal::println!("Sending command: {:?}", command);
         self.send_command(command.as_bytes()).await?;
 
         // Prepare the actual request command
